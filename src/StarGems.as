@@ -42,6 +42,10 @@ public class StarGems extends EventDispatcher
 	private var fallGapV:Number;
 	//下落宝石数组
 	private var fallList:Array;
+	//重力加速度
+	private const g:Number = .9;
+	//是否自动下落
+	private var _autoFall:Boolean;
 	/**
      * @param	totalColorType      总的颜色类型
      * @param	rows                行数
@@ -104,8 +108,10 @@ public class StarGems extends EventDispatcher
                 point = this.getGemPos(row, column);
                 gVo.x = point.x;
                 gVo.y = point.y;
+				gVo.g = 0;
 				gVo.color = this.randomColor();
 				this._gemDict[gVo] = gVo;
+				if (!this.fallList[column]) this.fallList[column] = [];
 			}
 		}
 		this.fallGapV = this.gapV * 2;
@@ -216,6 +222,7 @@ public class StarGems extends EventDispatcher
 			//颜色相同
 			if (roundGVo && 
 				!roundGVo.isCheck && 
+				roundGVo.isInPosition && 
 				roundGVo.color == gVo.color)
 			{
 				tempAry = this.getSameColorGem(roundGVo);
@@ -235,6 +242,46 @@ public class StarGems extends EventDispatcher
 		delete this._gemDict[gVo];
 	}
 	
+	/**
+	 * 填补被销毁的宝石
+	 * @param	columnList		被删除的列坐标列表
+	 */
+	private function reloadGem(columnList:Array):void
+	{
+        if (!columnList) return;
+        var length:int = columnList.length;
+        //当前列坐标
+        var column:int;
+        var gVo:GemVo;
+		//空行数量
+        var nullNum:int;
+		for (var i:int = 0; i < length; i += 1) 
+        {
+            column = columnList[i];
+			nullNum = 0;
+            for (var row:int = this.rows - 1; row >= 0; row -= 1) 
+            {
+				gVo = this.gemList[row][column];
+                if (gVo) 
+                {
+					//如果空行数量大于0 则往下移动空行数量个坐标
+                    if (nullNum > 0)
+                    {
+						gVo.isInPosition = false;
+                        gVo.row += nullNum;
+                        gVo.rangeY = this.getGemPos(row + nullNum, column).y;
+                        this.gemList[row][column] = null;
+                        this.gemList[row + nullNum][column] = gVo;
+						if (this.fallList[column].indexOf(gVo) == -1)
+							this.fallList[column].push(gVo);
+					}
+				}
+				else nullNum++;
+			}
+			this.fallList[column].sortOn("row", Array.NUMERIC);
+		}
+	}
+	
 	//***********public function***********
 	/**
 	 * 点击宝石
@@ -245,13 +292,18 @@ public class StarGems extends EventDispatcher
 	{
 		var gVo:GemVo = this.getGemVoByPos(posX, posY);
 		if (!gVo) return null;
+		if (!gVo.isInPosition) return null;
 		var arr:Array = this.getSameColorGem(gVo);
 		var length:int = arr.length;
+		var columnList:Array = [];
 		for (var i:int = 0; i < length; i += 1) 
 		{
 			gVo = arr[i];
 			this.removeGem(gVo);
+			if (columnList.indexOf(gVo.column) == -1)
+                columnList.push(gVo.column);
 		}
+		this.reloadGem(columnList);
 		arr.sortOn(["row", "column"], Array.NUMERIC);
 		return arr;
 	}
@@ -268,9 +320,77 @@ public class StarGems extends EventDispatcher
     }
 	
 	/**
+     * 下落
+     */
+    private function fall():void
+    {
+        if (!this.fallList || 
+			this.fallList.length == 0) return;
+        var gVo:GemVo;
+		for (var column:int = 0; column < this.columns; column += 1) 
+        {
+			for (var i:int = 0; i < this.fallList[column].length; i += 1)
+			{
+				gVo = this.fallList[column][i];
+				gVo.vy += gVo.g;
+				gVo.y += gVo.vy;
+				if (i == 0)
+				{
+					if (this._autoFall) gVo.g = this.g;
+				}
+				else
+				{
+					var prevGVo:GemVo = this.fallList[column][i - 1];
+					if (Math.abs(prevGVo.y - gVo.y) >= this.fallGapV)
+						gVo.g = this.g;
+				}
+				if (gVo.y >= gVo.rangeY)
+				{
+					gVo.y = gVo.rangeY;
+                    gVo.isInPosition = true;
+					gVo.vy = 0;
+					gVo.g = 0;
+					this.fallList[column].splice(i, 1);
+				}
+			}
+		}
+    }
+	
+	/**
+     * 更新数据
+     */
+    public function update():void
+    {
+       this.fall();
+    }
+	
+	/**
+	 * 开始下落
+	 */
+	public function beginFall():void 
+	{
+		if (!this.fallList || this.fallList.length == 0) return;
+		var gVo:GemVo;
+		for (var column:int = 0; column < this.columns; column += 1) 
+        {
+			gVo = this.fallList[column][0];
+			if (gVo) gVo.g = this.g;
+		}
+	}
+	
+	/**
 	 * 宝石字典
 	 */
-	public function get gemDict():Dictionary{ return _gemDict; }
+	public function get gemDict():Dictionary { return _gemDict; }
+	
+	/**
+	 * 是否自动下落，如果为false则需要在自行调用beginFall来控制下落的时机
+	 */
+	public function get autoFall():Boolean{ return _autoFall; }
+	public function set autoFall(value:Boolean):void 
+	{
+		_autoFall = value;
+	}
 	
 }
 }

@@ -4,6 +4,7 @@ import com.greensock.easing.Sine;
 import com.greensock.TweenMax;
 import data.GemVo;
 import flash.display.Sprite;
+import flash.events.Event;
 import flash.events.MouseEvent;
 import flash.filters.GlowFilter;
 import flash.utils.getTimer;
@@ -20,8 +21,10 @@ public class StarGemsTest extends Sprite
 	public function StarGemsTest() 
 	{
 		this.removeList = [];
-		this.starGems = new StarGems(this.colorAry.length - 1, 10, 10, 5, 5, 200, 80, 50, 50);
+		this.starGems = new StarGems(this.colorAry.length - 1, 10, 10, 5, 5, 200, 80, 40, 40);
+		this.starGems.autoFall = false;
 		this.initDrawGem();
+		this.addEventListener(Event.ENTER_FRAME, loop);
 		stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
 	}
 	
@@ -35,7 +38,7 @@ public class StarGemsTest extends Sprite
 		{
 			gVo.userData = new Sprite();
 			Sprite(gVo.userData).graphics.beginFill(this.colorAry[gVo.color]);
-			Sprite(gVo.userData).graphics.drawRoundRect(0, 0, 50, 50, 5, 5);
+			Sprite(gVo.userData).graphics.drawRoundRect(0, 0, 40, 40, 5, 5);
 			Sprite(gVo.userData).graphics.endFill();
 			Sprite(gVo.userData).x = gVo.x;
 			Sprite(gVo.userData).y = gVo.y;
@@ -97,18 +100,43 @@ public class StarGemsTest extends Sprite
 			{
 				var posX:Number = spt.x + spt.width * .5;
 				var posY:Number = spt.y + spt.height * .5;
+				this.removeList.splice(i, 1);
 				TweenMax.to(spt, .2, { scaleX:0, scaleY:0, 
 										x:posX, y:posY,
 										ease:Sine.easeOut, 
-										delay: i * .03, 
+										delay: (i + 1) * .03, 
 										onComplete:function ():void
 										{
 											if (spt.parent)
 												spt.parent.removeChild(spt);
+											//如果销毁动画都结束了这开始下落
+											if (removeList.length == 0)
+												starGems.beginFall();
 										}} );
-				this.removeList.splice(i, 1);
 			}
 		}
+	}
+	
+	/**
+	 * 渲染
+	 */
+	public function render():void
+	{
+		var gVo:GemVo;
+		for each (gVo in this.starGems.gemDict) 
+		{
+			if (gVo.userData && gVo.userData is Sprite)
+			{
+				Sprite(gVo.userData).x = gVo.x;
+				Sprite(gVo.userData).y = gVo.y;
+			}
+		}
+	}
+	
+	private function loop(event:Event):void 
+	{
+		this.starGems.update();
+		this.render();
 	}
 }
 }
