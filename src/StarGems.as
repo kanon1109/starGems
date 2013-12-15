@@ -1,6 +1,7 @@
 package  
 {
 import data.GemVo;
+import flash.events.EventDispatcher;
 import flash.geom.Point;
 import flash.utils.Dictionary;
 import utils.ArrayUtil;
@@ -9,7 +10,7 @@ import utils.Random;
  * ...消消看算法 类似于星宝石
  * @author Kanon
  */
-public class StarGems 
+public class StarGems extends EventDispatcher
 {
 	//总的颜色类型
 	private var totalColorType:uint;
@@ -39,6 +40,8 @@ public class StarGems
 	private var gemList:Array;
 	//下落时的间隔
 	private var fallGapV:Number;
+	//下落宝石数组
+	private var fallList:Array;
 	/**
      * @param	totalColorType      总的颜色类型
      * @param	rows                行数
@@ -80,6 +83,7 @@ public class StarGems
 		for (var i:int = 1; i <= this.totalColorType; i += 1)
 			this.colorList.push(i);
 		this.gemList = [];
+		this.fallList = [];
 		this._gemDict = new Dictionary();
 		var gVo:GemVo;
         var color:int;
@@ -221,6 +225,16 @@ public class StarGems
 		return sameColorList;
 	}
 	
+	/**
+	 * 销毁宝石数据
+	 * @param	gVo		宝石数据
+	 */
+	private function removeGem(gVo:GemVo):void
+	{
+		this.gemList[gVo.row][gVo.column] = null;
+		delete this._gemDict[gVo];
+	}
+	
 	//***********public function***********
 	/**
 	 * 点击宝石
@@ -236,10 +250,22 @@ public class StarGems
 		for (var i:int = 0; i < length; i += 1) 
 		{
 			gVo = arr[i];
-			gVo.isCheck = false;
+			this.removeGem(gVo);
 		}
+		arr.sortOn(["row", "column"], Array.NUMERIC);
 		return arr;
 	}
+	
+	/**
+     * 销毁
+     */
+    public function destroy():void
+    {
+        this.gemList = null;
+        this._gemDict = null;
+		this.colorList = null;
+        this.fallList = null;
+    }
 	
 	/**
 	 * 宝石字典
