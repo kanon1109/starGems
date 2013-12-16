@@ -296,6 +296,8 @@ public class StarGems extends EventDispatcher
         
         //横向整体填补空列
         var nullColumn:int;
+        nullColumList.sort();
+        trace("nullColumList", nullColumList);
         length = nullColumList.length;
         for (i = length - 1; i >= 0; i -= 1) 
         {
