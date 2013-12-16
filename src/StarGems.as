@@ -42,8 +42,12 @@ public class StarGems extends EventDispatcher
 	private var fallGapV:Number;
 	//下落宝石数组
 	private var fallList:Array;
+    //横向移动列表
+    private var moveList:Array;
 	//重力加速度
 	private const g:Number = .9;
+    //横向移动速度
+	private const speed:int = -5;
 	//是否自动下落
 	private var _autoFall:Boolean = true;
 	/**
@@ -88,6 +92,7 @@ public class StarGems extends EventDispatcher
 			this.colorList.push(i);
 		this.gemList = [];
 		this.fallList = [];
+		this.moveList = [];
 		this._gemDict = new Dictionary();
 		var gVo:GemVo;
         var color:int;
@@ -111,7 +116,6 @@ public class StarGems extends EventDispatcher
 				gVo.g = 0;
 				gVo.color = this.randomColor();
 				this._gemDict[gVo] = gVo;
-				if (!this.fallList[column]) this.fallList[column] = [];
 			}
 		}
 		this.fallGapV = this.gapV * 2;
@@ -209,14 +213,12 @@ public class StarGems extends EventDispatcher
 	private function getSameColorGem(gVo:GemVo):Array
 	{
 		if (!gVo) return null;
-		var roundGVo:GemVo;
-        var sameColorList:Array;
 		var posAry:Array = this.getSelectRoundGem(gVo.row, gVo.column);
 		if (posAry.length == 0) return null;
-        sameColorList = [gVo];
-        gVo.isCheck = true;
-		var length:int = posAry.length;
 		var tempAry:Array;
+        var roundGVo:GemVo;
+        var sameColorList:Array = [];
+		var length:int = posAry.length;
 		for (var i:int = 0; i < length; i += 1) 
 		{
 			roundGVo = posAry[i];
@@ -226,6 +228,8 @@ public class StarGems extends EventDispatcher
 				roundGVo.isInPosition && 
 				roundGVo.color == gVo.color)
 			{
+                roundGVo.isCheck = true;
+                sameColorList.push(roundGVo);
 				tempAry = this.getSameColorGem(roundGVo);
 				if (tempAry) sameColorList = sameColorList.concat(tempAry);
 			}
@@ -256,6 +260,9 @@ public class StarGems extends EventDispatcher
         var gVo:GemVo;
 		//空行数量
         var nullNum:int;
+        //存放一整都为空的列表
+        var nullColumList:Array = [];
+        var pos:Point;
 		for (var i:int = 0; i < length; i += 1) 
         {
             column = columnList[i];
@@ -270,20 +277,99 @@ public class StarGems extends EventDispatcher
                     {
 						gVo.isInPosition = false;
                         gVo.row += nullNum;
-                        gVo.rangeY = this.getGemPos(row + nullNum, column).y;
+                        pos = this.getGemPos(row + nullNum, column);
+                        gVo.rangeY = pos.y;
+                        gVo.rangeX = pos.x;
                         if (this._autoFall) gVo.g = this.g;
                         this.gemList[row][column] = null;
                         this.gemList[row + nullNum][column] = gVo;
-						if (this.fallList[column].indexOf(gVo) == -1)
-							this.fallList[column].push(gVo);
+						if (this.fallList.indexOf(gVo) == -1)
+							this.fallList.push(gVo);
 					}
 				}
 				else nullNum++;
 			}
-			this.fallList[column].sortOn("row", Array.NUMERIC);
+            //一整列都被删除
+            if (nullNum == this.rows) nullColumList.push(column);
+			this.fallList.sortOn("row", Array.NUMERIC);
 		}
+        
+        //横向整体填补空列
+        var nullColumn:int;
+        length = nullColumList.length;
+        for (i = length - 1; i >= 0; i -= 1) 
+        {
+            nullColumn = nullColumList[i];
+            for (row = 0; row < this.rows; row += 1)
+            {
+                for (column = nullColumn + 1; column < this.columns; column += 1) 
+                {
+                    gVo = this.gemList[row][column];
+                    if (gVo)
+                    {
+                        gVo.isInPosition = false;
+                        gVo.column--;
+                        pos = this.getGemPos(row, gVo.column);
+                        gVo.rangeX = pos.x;
+                        gVo.rangeY = pos.y;
+                        this.gemList[row][column] = null;
+                        this.gemList[row][gVo.column] = gVo;
+                        if (this._autoFall) gVo.vx = this.speed;
+                        else gVo.isHorizontalMove = true;
+                        if (this.fallList.indexOf(gVo) == -1)
+                            this.fallList.push(gVo);
+                    }
+                }
+            }
+        }
 	}
-	
+    
+    /**
+     * 重置宝石是否被判断的数据
+     */
+    private function resetGemCheck():void
+    {
+        var gVo:GemVo;
+        for each (gVo in this._gemDict) 
+        {
+            gVo.isCheck = false;
+        }
+    }
+    
+    /**
+     * 下落
+     */
+    private function fall():void
+    {
+        if (!this.fallList || this.fallList.length == 0) return;
+        var gVo:GemVo;
+		for (var i:int = 0; i < this.fallList.length; i += 1)
+        {
+            gVo = this.fallList[i];
+            gVo.vy += gVo.g;
+            gVo.x += gVo.vx;
+            gVo.y += gVo.vy;
+            if (gVo.y >= gVo.rangeY)
+            {
+                gVo.y = gVo.rangeY;
+                gVo.vy = 0;
+                gVo.g = 0;
+            }
+            if (gVo.x <= gVo.rangeX)
+            {
+                gVo.x = gVo.rangeX;
+                gVo.vx = 0;
+                gVo.isHorizontalMove = false;
+            }
+            if (gVo.y >= gVo.rangeY && 
+                gVo.x <= gVo.rangeX)
+            {
+                gVo.isInPosition = true;
+                this.fallList.splice(i, 1);
+            }
+        }
+    }
+    
 	//***********public function***********
 	/**
 	 * 点击宝石
@@ -294,15 +380,13 @@ public class StarGems extends EventDispatcher
 	{
 		var gVo:GemVo = this.getGemVoByPos(posX, posY);
 		if (!gVo) return null;
-		if (!gVo.isInPosition) return null;
+		if (!gVo.isInPosition || gVo.isCheck) return null;
 		var arr:Array = this.getSameColorGem(gVo);
-        if (!arr) return null;
+        if (!arr || arr.length == 0) return null;
+        gVo.isCheck = true;
+        arr.push(gVo);
 		var length:int = arr.length;
-        if (length <= 1)
-        {
-            gVo.isCheck = false;
-            return null;
-        }
+        //存放有被销毁宝石数据的列数的列表
 		var columnList:Array = [];
 		for (var i:int = 0; i < length; i += 1) 
 		{
@@ -311,10 +395,39 @@ public class StarGems extends EventDispatcher
 			if (columnList.indexOf(gVo.column) == -1)
                 columnList.push(gVo.column);
 		}
-		this.reloadGem(columnList);
 		arr.sortOn(["row", "column"], Array.NUMERIC);
+		this.reloadGem(columnList);
 		return arr;
 	}
+    
+    /**
+     * 判断是否存在相同颜色相邻的宝石数据
+     * @return     相同颜色相邻的宝石数据
+     */
+    public function checkHasSameColor():GemVo
+    {
+        if (!this.gemList) return null;
+        var gVo:GemVo;
+        var sameGemVo:GemVo;
+        for (var row:int = 0; row < this.rows; row += 1) 
+        {
+            for (var column:int = 0; column < this.columns; column += 1) 
+            {
+                gVo = this.gemList[row][column];
+                if (gVo && !gVo.isCheck)
+                {
+                    var arr:Array = this.getSameColorGem(gVo);
+                    if (arr && arr.length > 0) 
+                    {
+                        sameGemVo = arr[0];
+                        break;
+                    }
+                }
+            }
+        }
+        this.resetGemCheck();
+        return sameGemVo;
+    }
 	
 	/**
      * 销毁
@@ -325,32 +438,7 @@ public class StarGems extends EventDispatcher
         this._gemDict = null;
 		this.colorList = null;
         this.fallList = null;
-    }
-	
-	/**
-     * 下落
-     */
-    private function fall():void
-    {
-        if (!this.fallList || this.fallList.length == 0) return;
-        var gVo:GemVo;
-		for (var column:int = 0; column < this.columns; column += 1) 
-        {
-			for (var i:int = 0; i < this.fallList[column].length; i += 1)
-			{
-				gVo = this.fallList[column][i];
-				gVo.vy += gVo.g;
-				gVo.y += gVo.vy;
-				if (gVo.y >= gVo.rangeY)
-				{
-					gVo.y = gVo.rangeY;
-                    gVo.isInPosition = true;
-					gVo.vy = 0;
-					gVo.g = 0;
-					this.fallList[column].splice(i, 1);
-				}
-			}
-		}
+        this.moveList = null;
     }
 	
 	/**
@@ -368,14 +456,12 @@ public class StarGems extends EventDispatcher
 	{
 		if (!this.fallList || this.fallList.length == 0) return;
 		var gVo:GemVo;
-		for (var column:int = 0; column < this.columns; column += 1) 
+		for (var i:int = 0; i < this.fallList.length; i += 1)
         {
-            for (var i:int = 0; i < this.fallList[column].length; i += 1)
-			{
-                gVo = this.fallList[column][i];
-                gVo.g = this.g;
-            }
-		}
+            gVo = this.fallList[i];
+            gVo.g = this.g;
+            if (gVo.isHorizontalMove) gVo.vx = this.speed;
+        }
 	}
 	
 	/**

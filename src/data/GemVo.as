@@ -14,7 +14,9 @@ public class GemVo
     public var y:Number;
     /**纵向向量*/
     public var vy:Number = 0;
-    /**重力*/
+    /**横向向量*/
+    public var vx:Number = 0;
+    /**重力加速度*/
     public var g:Number = 0;
     /**宽度*/
     public var width:Number;
@@ -26,11 +28,15 @@ public class GemVo
     public var column:int;
     /**y坐标移动范围 超过范围则停止运动*/
     public var rangeY:Number = 0;
+    /**x坐标移动范围 超过范围则停止运动*/
+    public var rangeX:Number = 0;
     /**用户数据*/
     public var userData:*;
 	/**是否归位*/
     public var isInPosition:Boolean;
 	/**是否判断过了*/
 	public var isCheck:Boolean;
+    /**是否横向移动*/
+    public var isHorizontalMove:Boolean;
 }
 }

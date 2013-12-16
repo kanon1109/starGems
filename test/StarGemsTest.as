@@ -5,8 +5,10 @@ import com.greensock.TweenMax;
 import data.GemVo;
 import flash.display.Sprite;
 import flash.events.Event;
+import flash.events.KeyboardEvent;
 import flash.events.MouseEvent;
 import flash.filters.GlowFilter;
+import flash.ui.Keyboard;
 import flash.utils.getTimer;
 /**
  * ...消消看算法 测试类
@@ -26,8 +28,9 @@ public class StarGemsTest extends Sprite
 		this.initDrawGem();
 		this.addEventListener(Event.ENTER_FRAME, loop);
 		stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
+        stage.addEventListener(KeyboardEvent.KEY_DOWN, keyDownHandler);
 	}
-	
+    
 	/**
      * 绘制宝石
      */
@@ -97,7 +100,6 @@ public class StarGemsTest extends Sprite
 			{
 				var posX:Number = spt.x + spt.width * .5;
 				var posY:Number = spt.y + spt.height * .5;
-				this.removeList.splice(i, 1);
 				TweenMax.to(spt, .2, { scaleX:0, scaleY:0, 
 										x:posX, y:posY,
 										ease:Sine.easeOut, 
@@ -106,6 +108,8 @@ public class StarGemsTest extends Sprite
 										{
 											if (spt.parent)
 												spt.parent.removeChild(spt);
+                                            //删除列表清除
+                                            removeList.splice(i, 1);
 											//如果销毁动画都结束了这开始下落
 											if (removeList.length == 0)
 												starGems.beginFall();
@@ -113,6 +117,20 @@ public class StarGemsTest extends Sprite
 			}
 		}
 	}
+    
+    private function keyDownHandler(event:KeyboardEvent):void 
+    {
+        var gVo:GemVo = this.starGems.checkHasSameColor();
+        trace("gVo", gVo);
+		if (gVo) Sprite(gVo.userData).filters = [new GlowFilter(0x330000)];
+        
+		if (event.keyCode == Keyboard.S)
+			this.removeEventListener(Event.ENTER_FRAME, loop);
+		else if (event.keyCode == Keyboard.A)
+			this.addEventListener(Event.ENTER_FRAME, loop);
+		else if (event.keyCode == Keyboard.D)
+			this.starGems.destroy();
+    }
 	
 	/**
 	 * 渲染
