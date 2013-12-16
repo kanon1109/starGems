@@ -62,15 +62,12 @@ public class StarGemsTest extends Sprite
 	private function mouseDownHandler(event:MouseEvent):void 
 	{
 		this.reset();
-		var t:Number = getTimer()
 		var arr:Array =	this.starGems.selectGem(event.stageX, 
 												event.stageY);
-		trace(getTimer() - t);
 		if (!arr) return;
 		var gVo:GemVo;
 		var length:int = arr.length;
-		if (length <= 1) return;
-		for (var i:int = 0; i < length; i += 1) 
+		for (var i:int = 0; i < length; i += 1)
 		{
 			gVo = arr[i];
 			if (gVo.userData && 

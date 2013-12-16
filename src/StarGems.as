@@ -45,7 +45,7 @@ public class StarGems extends EventDispatcher
 	//重力加速度
 	private const g:Number = .9;
 	//是否自动下落
-	private var _autoFall:Boolean;
+	private var _autoFall:Boolean = true;
 	/**
      * @param	totalColorType      总的颜色类型
      * @param	rows                行数
@@ -209,11 +209,12 @@ public class StarGems extends EventDispatcher
 	private function getSameColorGem(gVo:GemVo):Array
 	{
 		if (!gVo) return null;
-		gVo.isCheck = true;
-		var sameColorList:Array = [gVo];
 		var roundGVo:GemVo;
+        var sameColorList:Array;
 		var posAry:Array = this.getSelectRoundGem(gVo.row, gVo.column);
 		if (posAry.length == 0) return null;
+        sameColorList = [gVo];
+        gVo.isCheck = true;
 		var length:int = posAry.length;
 		var tempAry:Array;
 		for (var i:int = 0; i < length; i += 1) 
@@ -270,6 +271,7 @@ public class StarGems extends EventDispatcher
 						gVo.isInPosition = false;
                         gVo.row += nullNum;
                         gVo.rangeY = this.getGemPos(row + nullNum, column).y;
+                        if (this._autoFall) gVo.g = this.g;
                         this.gemList[row][column] = null;
                         this.gemList[row + nullNum][column] = gVo;
 						if (this.fallList[column].indexOf(gVo) == -1)
@@ -294,7 +296,13 @@ public class StarGems extends EventDispatcher
 		if (!gVo) return null;
 		if (!gVo.isInPosition) return null;
 		var arr:Array = this.getSameColorGem(gVo);
+        if (!arr) return null;
 		var length:int = arr.length;
+        if (length <= 1)
+        {
+            gVo.isCheck = false;
+            return null;
+        }
 		var columnList:Array = [];
 		for (var i:int = 0; i < length; i += 1) 
 		{
@@ -324,8 +332,7 @@ public class StarGems extends EventDispatcher
      */
     private function fall():void
     {
-        if (!this.fallList || 
-			this.fallList.length == 0) return;
+        if (!this.fallList || this.fallList.length == 0) return;
         var gVo:GemVo;
 		for (var column:int = 0; column < this.columns; column += 1) 
         {
@@ -334,16 +341,6 @@ public class StarGems extends EventDispatcher
 				gVo = this.fallList[column][i];
 				gVo.vy += gVo.g;
 				gVo.y += gVo.vy;
-				if (i == 0)
-				{
-					if (this._autoFall) gVo.g = this.g;
-				}
-				else
-				{
-					var prevGVo:GemVo = this.fallList[column][i - 1];
-					if (Math.abs(prevGVo.y - gVo.y) >= this.fallGapV)
-						gVo.g = this.g;
-				}
 				if (gVo.y >= gVo.rangeY)
 				{
 					gVo.y = gVo.rangeY;
@@ -373,8 +370,11 @@ public class StarGems extends EventDispatcher
 		var gVo:GemVo;
 		for (var column:int = 0; column < this.columns; column += 1) 
         {
-			gVo = this.fallList[column][0];
-			if (gVo) gVo.g = this.g;
+            for (var i:int = 0; i < this.fallList[column].length; i += 1)
+			{
+                gVo = this.fallList[column][i];
+                gVo.g = this.g;
+            }
 		}
 	}
 	
